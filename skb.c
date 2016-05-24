@@ -7,20 +7,19 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include "util.h"
+
 #define CLEANMASK(mask)         (mask & ~(numlockmask|LockMask) & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
 #define LENGTH(X)               (sizeof X / sizeof X[0])
 
-typedef union {
-	        int i;
-	        unsigned int ui;
-	        float f;
-	        const void *v;
-} Arg;
+typedef const char *Arg[];
+
+typedef enum fn { Spawn, Mode } fn ;
 
 typedef struct {
 	        unsigned int mod;
 	        KeySym keysym;
-	        void (*func)(const Arg *);
+	        fn func;
 	        const Arg arg;
 } Key;
 
@@ -37,24 +36,10 @@ static Display *dpy;
 static Window root;
 static int screen;
 static unsigned int numlockmask = 0;
-static void (*handler[LASTEvent]) (XEvent *) = {
-        [ButtonPress] = buttonpress,
-        [ClientMessage] = clientmessage,
-        [ConfigureRequest] = configurerequest,
-        [ConfigureNotify] = configurenotify,
-        [DestroyNotify] = destroynotify,
-        [EnterNotify] = enternotify,
-        [Expose] = expose,
-        [FocusIn] = focusin,
-        [KeyPress] = keypress,
-        [MappingNotify] = mappingnotify,
-        [MapRequest] = maprequest,
-        [MotionNotify] = motionnotify,
-        [PropertyNotify] = propertynotify,
-        [UnmapNotify] = unmapnotify
-};
 
-#include "config.h"
+#include "config.skb.h"
+
+static Key *mode = def;
 
 void
 grabkeys(void)
@@ -66,10 +51,10 @@ grabkeys(void)
                 KeyCode code;
 
                 XUngrabKey(dpy, AnyKey, AnyModifier, root);
-                for (i = 0; i < LENGTH(keys); i++)
-                        if ((code = XKeysymToKeycode(dpy, keys[i].keysym)))
+                for (i = 0; i < LENGTH(mode); i++)
+                        if ((code = XKeysymToKeycode(dpy, mode[i].keysym)))
                                 for (j = 0; j < LENGTH(modifiers); j++)
-                                        XGrabKey(dpy, code, keys[i].mod | modifiers[j], root,
+                                        XGrabKey(dpy, code, mode[i].mod | modifiers[j], root,
                                                  True, GrabModeAsync, GrabModeAsync);
         }
 }
@@ -83,11 +68,11 @@ keypress(XEvent *e)
 
         ev = &e->xkey;
         keysym = XKeycodeToKeysym(dpy, (KeyCode)ev->keycode, 0);
-        for (i = 0; i < LENGTH(keys); i++)
-                if (keysym == keys[i].keysym
-                && CLEANMASK(keys[i].mod) == CLEANMASK(ev->state)
-                && keys[i].func)
-                        keys[i].func(&(keys[i].arg)); //this is where we would directly call spawn, rather than the funtable
+        for (i = 0; i < LENGTH(mode); i++)
+                if (keysym == mode[i].keysym
+                && CLEANMASK(mode[i].mod) == CLEANMASK(ev->state)
+                && mode[i].func)
+                        mode[i].func(&(mode[i].arg)); //this is where we would directly call spawn, rather than the funtable
 }
 
 void

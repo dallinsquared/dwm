@@ -28,6 +28,11 @@ dwm: ${OBJ}
 	@echo CC -o $@
 	@${CC} -o $@ ${OBJ} ${LDFLAGS}
 
+skb: skb.c config.skb.def.h util.c writestr.c
+	@cp config.skb.def.h config.skb.h
+	@${CC} -o $@ skb.c util.c ${LDFLAGS}
+	@${CC} -o writestr writestr.c util.c ${LDFLAGS}
+
 clean:
 	@echo cleaning
 	@rm -f dwm ${OBJ} dwm-${VERSION}.tar.gz
