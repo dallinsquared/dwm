@@ -30,7 +30,7 @@ dwm: ${OBJ}
 
 skb: skb.c config.skb.def.h util.c writestr.c
 	@cp config.skb.def.h config.skb.h
-	@${CC} -o $@ skb.c util.c ${LDFLAGS}
+	@${CC} ${CFLAGS} -o $@ skb.c util.c ${LDFLAGS}
 	@${CC} -o writestr writestr.c util.c ${LDFLAGS}
 
 clean:

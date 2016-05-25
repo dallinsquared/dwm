@@ -12,15 +12,16 @@
 #define CLEANMASK(mask)         (mask & ~(numlockmask|LockMask) & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
 #define LENGTH(X)               (sizeof X / sizeof X[0])
 
-typedef const char *Arg[];
-
-typedef enum fn { Spawn, Mode } fn ;
+typedef union {
+	const char *m;
+	const char **a;
+} Arg;
 
 typedef struct {
-	        unsigned int mod;
-	        KeySym keysym;
-	        fn func;
-	        const Arg arg;
+	unsigned int mod;
+	KeySym keysym;
+	void (*func)(const Arg *arg);
+	const Arg arg;
 } Key;
 
 static void grabkeys(void);
@@ -89,21 +90,19 @@ run(void)
 void
 setup(void)
 {
-	dpy = XOpenDisplay(NULL);
 	screen = DefaultScreen(dpy);
 	root = DefaultRootWindow(dpy);
 	grabkeys();
+}
 void
 spawn(const Arg *arg)
 {
-        if (arg->v == dmenucmd)
-                dmenumon[0] = '0' + selmon->num;
         if (fork() == 0) {
                 if (dpy)
                         close(ConnectionNumber(dpy));
                 setsid();
-                execvp(((char **)arg->v)[0], (char **)arg->v);
-                fprintf(stderr, "dwm: execvp %s", ((char **)arg->v)[0]);
+                execvp(((char **)arg->a)[0], (char **)arg->a);
+                fprintf(stderr, "skb: execvp %s", ((char **)arg->a)[0]);
                 perror(" failed");
                 exit(EXIT_SUCCESS);
         }
@@ -129,17 +128,13 @@ int
 main(int argc, char *argv[])
 {
         if (argc == 2 && !strcmp("-v", argv[1]))
-                die("dwm-"VERSION "\n");
+                die("skb-"VERSION "\n");
         else if (argc != 1)
-                die("usage: dwm [-v]\n");
-        if (!setlocale(LC_CTYPE, "") || !XSupportsLocale())
-                fputs("warning: no locale support\n", stderr);
+                die("usage: skb [-v]\n");
         if (!(dpy = XOpenDisplay(NULL)))
                 die("dwm: cannot open display\n");
         setup();
-        scan();
         run();
-        cleanup();
         return EXIT_SUCCESS;
 }
 
